@@ -1,2 +1,7 @@
+env:
+	@printchplenv
+
 all:
-	chpl -O --fast fft.chpl -lfftw3_mpi -lfftw3
+	CHPL_COMM=none CHPL_TASKS=fifo \
+	  CHPL_TARGET_COMPILER=mpi-gnu \
+		chpl -O --fast fft.chpl -lfftw3_mpi -lfftw3

@@ -51,15 +51,15 @@ var A, B : [Dall] real;
 
 // Set up the random number generator
 // and fill the array
-var rng = makeRandomStream(real,seed=(rank+1)*1234); 
+var rng = makeRandomStream(real,seed=(rank+1)*1234);
 A = 0.0;
 rng.fillRandom(A[Dx]);
 B = A;
 
 var sum1, sum2 : real;
 {
-  var localsum = + reduce A;
-  var localsum2 = + reduce A**2;
+  var localsum = + reduce A[Dx];
+  var localsum2 = + reduce A[Dx]**2;
   MPI_Reduce(localsum, sum1, 1, MPI_DOUBLE, MPI_SUM, 0, CHPL_COMM_WORLD);
   MPI_Reduce(localsum2, sum2, 1, MPI_DOUBLE, MPI_SUM, 0, CHPL_COMM_WORLD);
 }
@@ -67,10 +67,40 @@ if (rank==0) {
   writef("Total sum A=%er, sum A^2 = %er \n",sum1, sum2);
 }
 
+// FFTW forward
+var fwd = fftw_mpi_plan_dft_r2c_3d(Ng, Ng, Ng, B, B, CHPL_COMM_WORLD, FFTW_ESTIMATE); 
+execute(fwd);
+destroy_plan(fwd);
 
+// Check k=0,0,0
+if rank==0 {
+  writef("Element at k=(0,0,0) = %er \n",B[0,0,0]);
+  writef("Error = %er \n", B[0,0,0]/sum1 - 1);
+}
+var ksum2 : real;
+{
+  var localsum2 = + reduce B**2;
+  MPI_Reduce(localsum2, ksum2, 1, MPI_DOUBLE, MPI_SUM, 0, CHPL_COMM_WORLD);
+}
+if (rank==0) {
+  writef("Total sum B^2 = %er , error= %er\n",ksum2, ksum2/sum2 - 1);
+}
 
+// Backward transform
+var rev = fftw_mpi_plan_dft_c2r_3d(Ng, Ng, Ng, B, B, CHPL_COMM_WORLD, FFTW_ESTIMATE); 
+execute(rev);
+destroy_plan(rev);
+B *= invNg3;
 
-
+// Max difference
+var diff : real;
+{
+  var localdiff = max reduce abs(A[Dx]-B[Dx]);
+  MPI_Reduce(localdiff, diff, 1, MPI_DOUBLE, MPI_MAX, 0, CHPL_COMM_WORLD);
+}
+if (rank==0) {
+  writef("Max diff = %er\n",diff);
+}
 
 // Finalize
 fftw_mpi_cleanup();
@@ -84,3 +114,9 @@ if rank==0 {
 /////////////////////////////////////////////
 extern proc fftw_mpi_init();
 extern proc fftw_mpi_cleanup();
+extern proc fftw_mpi_plan_dft_r2c_3d(n0 : c_ptrdiff, n1 : c_ptrdiff, n2 : c_ptrdiff,
+                                     inarr : [], outarr : [],
+                                     comm : MPI_Comm, flags : c_uint) : fftw_plan;
+extern proc fftw_mpi_plan_dft_c2r_3d(n0 : c_ptrdiff, n1 : c_ptrdiff, n2 : c_ptrdiff,
+                                     inarr : [], outarr : [],
+                                     comm : MPI_Comm, flags : c_uint) : fftw_plan;
