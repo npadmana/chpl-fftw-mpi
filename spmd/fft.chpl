@@ -43,8 +43,10 @@ const yRange = 0.. #Ng;
 const zRange = 0.. #Ng2;
 const Dall = {xRange, yRange, zRange};
 const Dx = Dall[..,..,0.. #Ng];
-const Dre = {xRange, yRange, zRange by 2};
-const Dim = {xRange, yRange, zRange by 2 align 1};
+// Special case the frequencies for Parseval's thm
+const Dk2 = {xRange, yRange, 2..(Ng-1)}; // These get multiplied by 2
+const Dk1_0 = {xRange, yRange, 0..0}; // no double counting
+const Dk1_1 = {xRange, yRange, Ng..Ng}; // no double counting
 
 // Define the arrays
 var A, B : [Dall] real;
@@ -79,10 +81,13 @@ if rank==0 {
 }
 var ksum2 : real;
 {
-  var localsum2 = + reduce B**2;
+  var localsum2 = 2*(+ reduce B[Dk2]**2);
+  localsum2 += (+ reduce B[Dk1_0]**2);
+  localsum2 += (+ reduce B[Dk1_1]**2);
   MPI_Reduce(localsum2, ksum2, 1, MPI_DOUBLE, MPI_SUM, 0, CHPL_COMM_WORLD);
 }
 if (rank==0) {
+  ksum2 *= invNg3;
   writef("Total sum B^2 = %er , error= %er\n",ksum2, ksum2/sum2 - 1);
 }
 
