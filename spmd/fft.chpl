@@ -38,15 +38,15 @@ for irank in ranks {
 }
 
 // Define the domains we need
-const xRange = (rank*Ng/size).. #(Ng/size);
+const xRange = (rank*Ng/size).. #(Ng/size); // This is different for the different MPI ranks
 const yRange = 0.. #Ng;
 const zRange = 0.. #Ng2;
 const Dall = {xRange, yRange, zRange};
 const Dx = Dall[..,..,0.. #Ng];
 // Special case the frequencies for Parseval's thm
 const Dk2 = {xRange, yRange, 2..(Ng-1)}; // These get multiplied by 2
-const Dk1_0 = {xRange, yRange, 0..0}; // no double counting
-const Dk1_1 = {xRange, yRange, Ng..Ng}; // no double counting
+const Dk1_0 = {xRange, yRange, 0..1}; // no double counting
+const Dk1_1 = {xRange, yRange, Ng..Ng+1}; // no double counting
 
 // Define the arrays
 var A, B : [Dall] real;
@@ -78,6 +78,7 @@ destroy_plan(fwd);
 if rank==0 {
   writef("Element at k=(0,0,0) = %er \n",B[0,0,0]);
   writef("Error = %er \n", B[0,0,0]/sum1 - 1);
+  writef("Imaginary component (expected=0) : %er \n", B[0,0,1]);
 }
 var ksum2 : real;
 {
