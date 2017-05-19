@@ -1,0 +1,6 @@
+default:
+	@echo Run the following module commands....
+	@echo module load fftw
+
+%-cori.x: %.chpl
+	chpl -o $@ -O --fast $<
