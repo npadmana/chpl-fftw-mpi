@@ -39,7 +39,7 @@ forall loc in PrivateSpace {
   const rank=commRank();
   for irank in 0.. #size {
     if rank==irank then writef("This is MPI rank %i of size %i \n",rank, size);
-    MPI_Barrier(CHPL_COMM_WORLD);
+    Barrier(CHPL_COMM_WORLD);
   }
 }
 
@@ -65,9 +65,13 @@ writef("Total sum A=%er, sum A^2 = %er \n",sum1, sum2);
 // Now FFT
 forall loc in PrivateSpace {
   var idx = B.localSubdomain().low;
-  var fwd = fftw_mpi_plan_dft_r2c_3d(Ng, Ng, Ng, B[idx], B[idx], CHPL_COMM_WORLD, FFTW_ESTIMATE);
-  execute(fwd);
-  destroy_plan(fwd);
+  Barrier(CHPL_COMM_WORLD);
+  {
+    // MPI calls
+    var fwd = fftw_mpi_plan_dft_r2c_3d(Ng, Ng, Ng, B[idx], B[idx], CHPL_COMM_WORLD, FFTW_ESTIMATE);
+    execute(fwd);
+    destroy_plan(fwd);
+  }
 }
 
 // This element is on the main process
@@ -87,9 +91,13 @@ writef("Total sum B^2 = %er , error= %er\n",ksum2, ksum2/sum2 - 1);
 // Inverse transform
 forall loc in PrivateSpace {
   var idx = B.localSubdomain().low;
-  var rev = fftw_mpi_plan_dft_c2r_3d(Ng, Ng, Ng, B[idx], B[idx], CHPL_COMM_WORLD, FFTW_ESTIMATE);
-  execute(rev);
-  destroy_plan(rev);
+  Barrier(CHPL_COMM_WORLD);
+  {
+    // MPI calls
+    var rev = fftw_mpi_plan_dft_c2r_3d(Ng, Ng, Ng, B[idx], B[idx], CHPL_COMM_WORLD, FFTW_ESTIMATE);
+    execute(rev);
+    destroy_plan(rev);
+  }
 }
 B *= invNg3;
 
